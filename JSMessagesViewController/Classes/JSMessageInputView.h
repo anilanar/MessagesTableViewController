@@ -41,6 +41,13 @@ typedef NS_ENUM(NSUInteger, JSMessageInputViewStyle) {
  */
 @property (assign, nonatomic, readonly) JSMessageInputViewStyle style;
 
+
+/**
+ *  The attachment button that can be used to send an image or a video whose appearance is styled according to the value of style during initialization.
+ *  @see JSMessageInputViewStyle.
+ */
+@property (weak, nonatomic, readonly) UIButton *attachmentButton;
+
 /**
  *  Returns the textView into which a new message is composed. This property is never `nil`.
  */

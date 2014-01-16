@@ -145,7 +145,7 @@
 
 - (JSMessageInputViewStyle)inputViewStyle
 {
-    return JSMessageInputViewStyleFlat;
+    return JSMessageInputViewStyleClassic;
 }
 
 #pragma mark - Messages view delegate: OPTIONAL
