@@ -45,7 +45,7 @@
 {
     CGFloat sendButtonWidth = (style == JSMessageInputViewStyleClassic) ? 78.0f : 64.0f;
     //TODO Flat style attach. button width;
-    CGFloat attachmentButtonWidth = (style == JSMessageInputViewStyleClassic) ? 48.0f : 0.0f;
+    CGFloat attachmentButtonWidth = (style == JSMessageInputViewStyleClassic) ? 48.0f : 41.0f;
     
     CGFloat width = self.frame.size.width - sendButtonWidth - attachmentButtonWidth;
     CGFloat height = [JSMessageInputView textViewLineHeight];
@@ -72,7 +72,7 @@
     }
     else {
         //TODO Flat Style text view frame
-        _textView.frame = CGRectMake(4.0f, 4.5f, width, height);
+        _textView.frame = CGRectMake(attachmentButtonWidth, 4.5f, width, height);
         _textView.backgroundColor = [UIColor clearColor];
         _textView.layer.borderColor = [UIColor colorWithWhite:0.8f alpha:1.0f].CGColor;
         _textView.layer.borderWidth = 0.65f;
@@ -108,9 +108,20 @@
     }
     else {
         attachmentButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        [attachmentButton setBackgroundColor:[UIColor clearColor]];
         
-        // TODO Continue.
+        UIImage *attachmentImage = [UIImage imageNamed:@"button-photo"];
+        UIImage *attachmentImageHighlighted = [UIImage imageNamed:@"button-photo-pressed"];
+        
+        [attachmentButton setBackgroundColor:[UIColor clearColor]];
+        [attachmentButton setImage:attachmentImage forState:UIControlStateNormal];
+        [attachmentButton setImage:attachmentImage forState:UIControlStateDisabled];
+        [attachmentButton setImage:attachmentImageHighlighted forState:UIControlStateHighlighted];
+        
+        CGFloat lineHeight = [JSMessageInputView textViewLineHeight];
+        
+        [attachmentButton setFrame: CGRectMake(0.0f, 4.0f, 41.0f, lineHeight)];
+//        CGFloat verticalInset = 0.0f;
+//        CGFloat horizontalInset =
     }
     
     [self addSubview:attachmentButton];
