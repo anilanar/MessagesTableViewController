@@ -90,6 +90,11 @@
 
 #pragma mark - Messages view delegate: REQUIRED
 
+-(void)didPressAttachmentButton
+{
+    
+}
+
 - (void)didSendText:(NSString *)text
 {
     [self.messages addObject:text];
