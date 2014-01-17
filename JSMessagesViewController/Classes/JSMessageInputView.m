@@ -44,8 +44,10 @@
 - (void)configureInputBarWithStyle:(JSMessageInputViewStyle)style
 {
     CGFloat sendButtonWidth = (style == JSMessageInputViewStyleClassic) ? 78.0f : 64.0f;
+    //TODO Flat style attach. button width;
+    CGFloat attachmentButtonWidth = (style == JSMessageInputViewStyleClassic) ? 48.0f : 41.0f;
     
-    CGFloat width = self.frame.size.width - sendButtonWidth;
+    CGFloat width = self.frame.size.width - sendButtonWidth - attachmentButtonWidth;
     CGFloat height = [JSMessageInputView textViewLineHeight];
     
     JSMessageTextView *textView = [[JSMessageTextView  alloc] initWithFrame:CGRectZero];
@@ -53,7 +55,7 @@
 	_textView = textView;
     
     if(style == JSMessageInputViewStyleClassic) {
-        _textView.frame = CGRectMake(6.0f, 3.0f, width, height);
+        _textView.frame = CGRectMake(attachmentButtonWidth, 3.0f, width, height);
         _textView.backgroundColor = [UIColor whiteColor];
         
         self.image = [[UIImage imageNamed:@"input-bar-background"] resizableImageWithCapInsets:UIEdgeInsetsMake(19.0f, 3.0f, 19.0f, 3.0f)
@@ -69,7 +71,8 @@
         [self addSubview:inputFieldBack];
     }
     else {
-        _textView.frame = CGRectMake(4.0f, 4.5f, width, height);
+        //TODO Flat Style text view frame
+        _textView.frame = CGRectMake(attachmentButtonWidth, 4.5f, width, height);
         _textView.backgroundColor = [UIColor clearColor];
         _textView.layer.borderColor = [UIColor colorWithWhite:0.8f alpha:1.0f].CGColor;
         _textView.layer.borderWidth = 0.65f;
@@ -78,6 +81,51 @@
         self.image = [[UIImage imageNamed:@"input-bar-flat"] resizableImageWithCapInsets:UIEdgeInsetsMake(2.0f, 0.0f, 0.0f, 0.0f)
                                                                             resizingMode:UIImageResizingModeStretch];
     }
+}
+
+- (void)configureAttachmentButtonWithStyle:(JSMessageInputViewStyle)style
+{
+    UIButton *attachmentButton;
+    
+    if(style == JSMessageInputViewStyleClassic) {
+        attachmentButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        
+        UIImage *attachmentImage = [UIImage imageNamed:@"button-photo-classic"];
+        UIImage *attachmentImageHighlighted = [UIImage imageNamed:@"button-photo-classic-pressed"];
+        
+        [attachmentButton setBackgroundColor:[UIColor clearColor]];
+        [attachmentButton setImage:attachmentImage forState:UIControlStateNormal];
+        [attachmentButton setImage:attachmentImage forState:UIControlStateDisabled];
+        [attachmentButton setImage:attachmentImageHighlighted forState:UIControlStateHighlighted];
+        
+        CGFloat lineHeight = [JSMessageInputView textViewLineHeight];
+        
+        [attachmentButton setFrame:CGRectMake(0.0f, 3.0f, 48.0f, lineHeight)];
+//        CGFloat verticalInset = (lineHeight - 24.0f) / 2.0f;
+        CGFloat verticalInset = 3.0f;
+        CGFloat horizontalInset = (54.0f - lineHeight) / 2.0f;
+        [attachmentButton setImageEdgeInsets:UIEdgeInsetsMake(verticalInset, horizontalInset, verticalInset, horizontalInset)];
+    }
+    else {
+        attachmentButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        
+        UIImage *attachmentImage = [UIImage imageNamed:@"button-photo"];
+        UIImage *attachmentImageHighlighted = [UIImage imageNamed:@"button-photo-pressed"];
+        
+        [attachmentButton setBackgroundColor:[UIColor clearColor]];
+        [attachmentButton setImage:attachmentImage forState:UIControlStateNormal];
+        [attachmentButton setImage:attachmentImage forState:UIControlStateDisabled];
+        [attachmentButton setImage:attachmentImageHighlighted forState:UIControlStateHighlighted];
+        
+        CGFloat lineHeight = [JSMessageInputView textViewLineHeight];
+        
+        [attachmentButton setFrame: CGRectMake(0.0f, 4.0f, 41.0f, lineHeight)];
+//        CGFloat verticalInset = 0.0f;
+//        CGFloat horizontalInset =
+    }
+    
+    [self addSubview:attachmentButton];
+    _attachmentButton = attachmentButton;
 }
 
 - (void)configureSendButtonWithStyle:(JSMessageInputViewStyle)style
@@ -135,6 +183,7 @@
     if(self) {
         _style = style;
         [self setup];
+        [self configureAttachmentButtonWithStyle:style];
         [self configureInputBarWithStyle:style];
         [self configureSendButtonWithStyle:style];
         

@@ -89,6 +89,10 @@
         [inputView setSendButton:sendButton];
     }
     
+    [inputView.attachmentButton addTarget:self
+                                   action:@selector(attachmentPressed:)
+                         forControlEvents:UIControlEventTouchUpInside];
+    
     inputView.sendButton.enabled = NO;
     [inputView.sendButton addTarget:self
                              action:@selector(sendPressed:)
@@ -188,6 +192,11 @@
 }
 
 #pragma mark - Actions
+
+- (void)attachmentPressed:(UIButton *)sender
+{
+    [self.delegate didPressAttachmentButton];
+}
 
 - (void)sendPressed:(UIButton *)sender
 {

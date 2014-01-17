@@ -101,6 +101,12 @@ typedef NS_ENUM(NSUInteger, JSMessagesViewSubtitlePolicy) {
 /**
  *  Tells the delegate that the specified text has been sent. Hook into your own backend here.
  *
+ */
+- (void)didPressAttachmentButton;
+
+/**
+ *  Tells the delegate that the specified text has been sent. Hook into your own backend here.
+ *
  *  @param text A string containing the text that was present in the messageInputView's textView when the send button was pressed.
  */
 - (void)didSendText:(NSString *)text;
