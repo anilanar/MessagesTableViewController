@@ -267,13 +267,21 @@
         self.imageView.frame = imageFrame;
         self.textView.frame = CGRectZero;
     }
-    
-    CGRect textFrame = CGRectMake(textX,
-                                  self.bubbleImageView.frame.origin.y,
-                                  self.bubbleImageView.frame.size.width - (self.bubbleImageView.image.capInsets.right / 2.0f),
-                                  self.bubbleImageView.frame.size.height - kMarginTop);
-    
-    self.textView.frame = CGRectIntegral(textFrame);
+    else
+    {
+        CGFloat textX = self.bubbleImageView.frame.origin.x;
+        if(self.type == JSBubbleMessageTypeIncoming) {
+            textX += (self.bubbleImageView.image.capInsets.left / 2.0f);
+        }
+        
+        CGRect textFrame = CGRectMake(textX,
+                                      self.bubbleImageView.frame.origin.y,
+                                      self.bubbleImageView.frame.size.width - (self.bubbleImageView.image.capInsets.right / 2.0f),
+                                      self.bubbleImageView.frame.size.height - kMarginTop);
+        
+        self.textView.frame = CGRectIntegral(textFrame);
+        self.imageView.frame = CGRectZero;
+    }
 }
 
 #pragma mark - Bubble view
