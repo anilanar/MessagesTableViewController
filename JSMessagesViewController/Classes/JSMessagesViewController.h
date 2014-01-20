@@ -133,16 +133,6 @@ typedef NS_ENUM(NSUInteger, JSMessagesViewSubtitlePolicy) {
 - (UIImageView *)bubbleImageViewWithType:(JSBubbleMessageType)type
                        forRowAtIndexPath:(NSIndexPath *)indexPath;
 
-
-/**
- *  Asks the delegate what height should be used to display the image that resides in the row specified by the index path.
- * 
- *  @param indexPath    The index path of the row.
- *
- *  @return Height for image to be displayed.
- */
-- (CGSize)sizeForImageAtIndexPath:(NSIndexPath *)indexPath;
-
 /**
  *  Asks the delegate for the timestamp policy.
  *
@@ -207,6 +197,18 @@ typedef NS_ENUM(NSUInteger, JSMessagesViewSubtitlePolicy) {
  *  @return A custom `UIButton` to use in messageInputView.
  */
 - (UIButton *)sendButtonForInputView;
+
+/**
+ *  Asks the delegate what size should be used to display the image that resides in the row specified by the index path. This must be implemented
+ *  by the delegate if `imageViewForRowAtIndexPath:` is implemented.
+ *
+ *  @param indexPath    The index path of the row.
+ *
+ *  @return Height for image to be displayed.
+ *
+ *  @see imageViewForRowAtIndexPath:
+ */
+- (CGSize)sizeForImageViewAtIndexPath:(NSIndexPath *)indexPath;
 
 @end
 

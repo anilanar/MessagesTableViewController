@@ -227,7 +227,7 @@
     else return nil;
 }
 
-- (CGSize)sizeForImageAtIndexPath:(NSIndexPath *)indexPath
+- (CGSize)sizeForImageViewAtIndexPath:(NSIndexPath *)indexPath
 {
     return CGSizeMake(200.0f, 100.0f);
 }
