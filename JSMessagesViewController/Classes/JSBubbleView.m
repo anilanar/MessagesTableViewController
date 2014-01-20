@@ -267,7 +267,8 @@
         self.imageView.frame = imageFrame;
         self.textView.frame = CGRectZero;
     }
-    else {
+    else
+    {
         CGFloat textX = self.bubbleImageView.frame.origin.x;
         if(self.type == JSBubbleMessageTypeIncoming) {
             textX += (self.bubbleImageView.image.capInsets.left / 2.0f);
