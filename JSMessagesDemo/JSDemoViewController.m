@@ -100,7 +100,7 @@
 
 -(void)didPressAttachmentButton
 {
-    
+    [[[UIAlertView alloc] initWithTitle:@"Attachment Button" message:@"You pressed attachment button." delegate:nil cancelButtonTitle:@"Cancel" otherButtonTitles:nil] show];
 }
 
 - (void)didSendText:(NSString *)text
@@ -220,7 +220,8 @@
     if(indexPath.row % 2 == 1)
     {
         UIImageView *resultImageView = [[UIImageView alloc] init];
-        [resultImageView setImageWithURL:[NSURL URLWithString:@"http://images.apple.com/v/home/am/images/your_verse_hero_2x.jpg"]];
+        [resultImageView setImageWithURL:[NSURL URLWithString:@"http://images.apple.com/v/home/am/images/your_verse_hero_2x.jpg"] placeholderImage:_image];
+        resultImageView.contentMode = UIViewContentModeScaleToFill;
         return resultImageView;
     }
     else return nil;
@@ -228,7 +229,7 @@
 
 - (CGSize)sizeForImageAtIndexPath:(NSIndexPath *)indexPath
 {
-    return CGSizeMake(100.0f, 200.0f);
+    return CGSizeMake(200.0f, 100.0f);
 }
 
 - (NSDate *)timestampForRowAtIndexPath:(NSIndexPath *)indexPath
