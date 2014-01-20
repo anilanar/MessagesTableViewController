@@ -244,7 +244,8 @@
     }
     
     [cell setMessageWithText:[self.dataSource textForRowAtIndexPath:indexPath]];
-    [cell setMessageWithImage:[self.dataSource imageForRowAtIndexPath:indexPath]];
+    [cell setMessageWithImageView:[self.dataSource imageViewForRowAtIndexPath:indexPath]];
+    [cell setImageViewSize:[self.delegate sizeForImageAtIndexPath:indexPath]];
     [cell setBackgroundColor:tableView.backgroundColor];
     
 	#if TARGET_IPHONE_SIMULATOR
@@ -264,19 +265,19 @@
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    UIImage *image = [self.dataSource imageForRowAtIndexPath:indexPath];
+    UIImageView *imageView = [self.dataSource imageViewForRowAtIndexPath:indexPath];
     NSString *text = [self.dataSource textForRowAtIndexPath:indexPath];
     
     BOOL hasTimestamp = [self shouldHaveTimestampForRowAtIndexPath:indexPath];
     BOOL hasAvatar = [self shouldHaveAvatarForRowAtIndexPath:indexPath];
 	BOOL hasSubtitle = [self shouldHaveSubtitleForRowAtIndexPath:indexPath];
     
-    if(image)
+    if(imageView)
     {
-        return [JSBubbleMessageCell neededHeightForBubbleMessageCellWithImage:image
-                                                                   timestamp:hasTimestamp
-                                                                      avatar:hasAvatar
-                                                                    subtitle:hasSubtitle];
+        return [JSBubbleMessageCell neededHeightForBubbleMessageCellWithImageViewHeight:[self.delegate sizeForImageAtIndexPath:indexPath].height
+                                                                              timestamp:hasTimestamp
+                                                                                 avatar:hasAvatar
+                                                                               subtitle:hasSubtitle];
     }
     else
     {

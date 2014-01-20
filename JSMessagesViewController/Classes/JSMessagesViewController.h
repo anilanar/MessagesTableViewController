@@ -133,6 +133,16 @@ typedef NS_ENUM(NSUInteger, JSMessagesViewSubtitlePolicy) {
 - (UIImageView *)bubbleImageViewWithType:(JSBubbleMessageType)type
                        forRowAtIndexPath:(NSIndexPath *)indexPath;
 
+
+/**
+ *  Asks the delegate what height should be used to display the image that resides in the row specified by the index path.
+ * 
+ *  @param indexPath    The index path of the row.
+ *
+ *  @return Height for image to be displayed.
+ */
+- (CGSize)sizeForImageAtIndexPath:(NSIndexPath *)indexPath;
+
 /**
  *  Asks the delegate for the timestamp policy.
  *
@@ -218,13 +228,13 @@ typedef NS_ENUM(NSUInteger, JSMessagesViewSubtitlePolicy) {
 
 
 /**
- * Asks the data source for the image to display for the row at the specified index path.
+ * Asks the data source for the image view to display for the row at the specified index path.
  *
  * @param indexPath An index path locating a row in the table view.
  *
- * @return An image. If a cell contains an image, text is ignored.
+ * @return An image view. If a cell contains an image view, text is ignored.
  */
-- (UIImage *)imageForRowAtIndexPath:(NSIndexPath *)indexPath;
+- (UIImageView *)imageViewForRowAtIndexPath:(NSIndexPath *)indexPath;
 
 /**
  *  Asks the data source for the date to display in the timestamp label *above* the row at the specified index path.

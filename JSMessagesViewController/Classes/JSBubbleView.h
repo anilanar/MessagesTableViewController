@@ -42,7 +42,9 @@
 /**
  * Returns the image view containing the message image for this bubble view.
  */
-@property (weak, nonatomic, readonly) UIImageView *imageView;
+@property (weak, nonatomic) UIImageView *imageView;
+
+@property (assign, nonatomic) CGSize imageViewSize;
 
 /**
  *  The font for the text contained in the bubble view. The default value is `[UIFont systemFontOfSize:16.0f]`.
@@ -88,12 +90,12 @@
 + (CGFloat)neededHeightForText:(NSString *)text;
 
 /**
- * Computes and returns the minimum necessary height of a 'JSBubbleView' needed to display the given image.
+ * Computes and returns the minimum necessary height of a 'JSBubbleView' needed to display the given content height.
  *
- * @param image The image to display in the bubble view.
+ * @param contentHeight The height of the content that is to be displayed in the bubble view.
  *
- * @return The height required for the frame of the bubble view in order to display the given image.
+ * @return The height required for the frame of the bubble view in order to display the content.
  */
-+ (CGFloat)neededHeightForImage:(UIImage *)image;
++ (CGFloat)neededHeightForContentHeight:(CGFloat)contentHeight;
 
 @end

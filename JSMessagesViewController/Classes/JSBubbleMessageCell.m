@@ -213,6 +213,7 @@ static const CGFloat kJSSubtitleLabelHeight = 15.0f;
 {
     [super prepareForReuse];
     self.bubbleView.textView.text = nil;
+    self.bubbleView.imageView = nil;
     self.timestampLabel.text = nil;
     self.avatarImageView = nil;
     self.subtitleLabel.text = nil;
@@ -232,9 +233,14 @@ static const CGFloat kJSSubtitleLabelHeight = 15.0f;
     self.bubbleView.textView.text = text;
 }
 
-- (void)setMessageWithImage:(UIImage *)image
+- (void)setMessageWithImageView:(UIImageView *)imageView
 {
-    self.bubbleView.imageView.image = image;
+    self.bubbleView.imageView = imageView;
+}
+
+- (void)setImageViewSize:(CGSize)imageViewSize
+{
+    [self.bubbleView setImageViewSize:imageViewSize];
 }
 
 - (void)setTimestamp:(NSDate *)date
@@ -282,7 +288,10 @@ static const CGFloat kJSSubtitleLabelHeight = 15.0f;
     return subviewHeights + MAX(avatarHeight, bubbleHeight);
 }
 
-+ (CGFloat)neededHeightForBubbleMessageCellWithImage:(UIImage *)image timestamp:(BOOL)hasTimestamp avatar:(BOOL)hasAvatar subtitle:(BOOL)hasSubtitle
++ (CGFloat)neededHeightForBubbleMessageCellWithImageViewHeight:(CGFloat)imageViewHeight
+                                                     timestamp:(BOOL)hasTimestamp
+                                                        avatar:(BOOL)hasAvatar
+                                                      subtitle:(BOOL)hasSubtitle
 {
     CGFloat timestampHeight = hasTimestamp ? kJSTimeStampLabelHeight : 0.0f;
     CGFloat avatarHeight = hasAvatar ? kJSAvatarImageSize : 0.0f;
@@ -290,7 +299,7 @@ static const CGFloat kJSSubtitleLabelHeight = 15.0f;
     
     CGFloat subviewHeights = timestampHeight + subtitleHeight + kJSLabelPadding;
     
-    CGFloat bubbleHeight = [JSBubbleView neededHeightForImage:image];
+    CGFloat bubbleHeight = [JSBubbleView neededHeightForContentHeight:imageViewHeight];
     
     return subviewHeights + MAX(avatarHeight, bubbleHeight);
 }

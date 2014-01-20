@@ -13,6 +13,7 @@
 //
 
 #import "JSDemoViewController.h"
+#import <SDWebImage/UIImageView+WebCache.h>
 
 #define kSubtitleJobs @"Jobs"
 #define kSubtitleWoz @"Steve Wozniak"
@@ -214,11 +215,20 @@
     return [self.messages objectAtIndex:indexPath.row];
 }
 
-- (UIImage *)imageForRowAtIndexPath:(NSIndexPath *)indexPath
+- (UIImageView *)imageViewForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     if(indexPath.row % 2 == 1)
-        return self.image;
+    {
+        UIImageView *resultImageView = [[UIImageView alloc] init];
+        [resultImageView setImageWithURL:[NSURL URLWithString:@"http://images.apple.com/v/home/am/images/your_verse_hero_2x.jpg"]];
+        return resultImageView;
+    }
     else return nil;
+}
+
+- (CGSize)sizeForImageAtIndexPath:(NSIndexPath *)indexPath
+{
+    return CGSizeMake(100.0f, 200.0f);
 }
 
 - (NSDate *)timestampForRowAtIndexPath:(NSIndexPath *)indexPath

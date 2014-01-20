@@ -29,7 +29,6 @@
 @interface JSBubbleView()
 
 - (void)configureTextView;
-- (void)configureImageView;
 
 - (void)setup;
 
@@ -39,10 +38,9 @@
 - (void)removeImageViewObservers;
 
 + (CGSize)textSizeForText:(NSString *)txt;
-+ (CGSize)imageSizeForImage:(UIImage *)image;
 + (CGSize)neededSizeForText:(NSString *)text;
 + (CGFloat)neededHeightForText:(NSString *)text;
-+ (CGSize)neededSizeForImage:(UIImage *)image;
++ (CGSize)neededSizeForImageViewSize:(CGSize)imageViewSize;
 
 @end
 
@@ -76,7 +74,6 @@
         _bubbleImageView = bubbleImageView;
         
         [self configureTextView];
-        [self configureImageView];
     }
     return self;
 }
@@ -116,23 +113,13 @@
     [self addTextViewObservers];
 }
 
-- (void)configureImageView
-{
-    UIImageView *imageView = [[UIImageView alloc] init];
-    imageView.userInteractionEnabled = YES;
-    [self addSubview:imageView];
-    [self bringSubviewToFront:imageView];
-    _imageView = imageView;
-    
-    [self addImageViewObservers];
-}
-
 - (void)dealloc
 {
     [self removeTextViewObservers];
     [self removeImageViewObservers];
     _bubbleImageView = nil;
     _textView = nil;
+    _imageView = nil;
 }
 
 #pragma mark - KVO
@@ -203,6 +190,19 @@
     _textView.font = font;
 }
 
+-(void)setImageView:(UIImageView *)imageView
+{
+    [self removeImageViewObservers];
+    [_imageView removeFromSuperview];
+    
+    _imageView = imageView;
+    
+    _imageView.userInteractionEnabled = YES;
+    [self addSubview:_imageView];
+    [self bringSubviewToFront:_imageView];
+    [self addImageViewObservers];
+}
+
 #pragma mark - UIAppearance Getters
 
 - (UIFont *)font
@@ -223,8 +223,8 @@
 - (CGRect)bubbleFrame
 {
     CGSize bubbleSize;
-    if(self.imageView.image) {
-        bubbleSize = [JSBubbleView neededSizeForImage:self.imageView.image];
+    if(self.imageView) {
+        bubbleSize = [JSBubbleView neededSizeForImageViewSize:self.imageViewSize];
     }
     else {
         bubbleSize = [JSBubbleView neededSizeForText:self.textView.text];
@@ -244,9 +244,9 @@
     
     self.bubbleImageView.frame = [self bubbleFrame];
     
-    if(self.imageView.image) {
+    if(self.imageView) {
         
-        CGSize imageSize = [JSBubbleView imageSizeForImage:self.imageView.image];
+        CGSize imageSize = self.imageViewSize;
         
         CGFloat imageX = self.bubbleImageView.frame.origin.x + (self.bubbleImageView.frame.size.width - imageSize.width) / 2.0f;
         
@@ -292,23 +292,6 @@
     return [self textSizeForText:txt maxWidth:maxWidth];
 }
 
-+ (CGSize)imageSizeForImage: (UIImage *)image
-{
-    CGSize imageSize = [image size];
-    CGFloat maxWidth = [UIScreen mainScreen].applicationFrame.size.width * 0.70f;
-    
-    if(imageSize.width > maxWidth)
-    {
-        CGFloat ratio = maxWidth / imageSize.width;
-        CGFloat scaledHeight = imageSize.height * ratio;
-        
-        return CGSizeMake(maxWidth, scaledHeight);
-    }
-    
-    return CGSizeMake(imageSize.width,
-                      imageSize.height);
-}
-
 + (CGSize)textSizeForText:(NSString *)txt maxWidth:(CGFloat)maxWidth
 {
     CGFloat maxHeight = MAX([JSMessageTextView numberOfLinesForMessage:txt],
@@ -341,23 +324,21 @@
                       textSize.height + kPaddingTop + kPaddingBottom);
 }
 
-+ (CGSize)neededSizeForImage:(UIImage *)image
-{
-    CGSize imageSize = [self imageSizeForImage:image];
-
-    return CGSizeMake(imageSize.width + kBubblePaddingRight,
-                      imageSize.height);
-}
-
 + (CGFloat)neededHeightForText:(NSString *)text
 {
     CGSize size = [JSBubbleView neededSizeForText:text];
     return size.height + kMarginTop + kMarginBottom;
 }
 
-+ (CGFloat)neededHeightForImage:(UIImage *)image
++ (CGFloat)neededHeightForContentHeight:(CGFloat)contentHeight
 {
-    return [self imageSizeForImage:image].height + kMarginTop + kMarginBottom;
+    return contentHeight + kMarginTop + kMarginBottom;
+}
+
++(CGSize)neededSizeForImageViewSize:(CGSize)imageViewSize
+{
+    return CGSizeMake(imageViewSize.width + kBubblePaddingRight,
+                      imageViewSize.height);
 }
 
 @end
