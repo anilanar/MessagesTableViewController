@@ -63,14 +63,11 @@
     JSMessageInputViewStyle inputViewStyle = [self.delegate inputViewStyle];
     CGFloat inputViewHeight = (inputViewStyle == JSMessageInputViewStyleFlat) ? 45.0f : 40.0f;
     
-    UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(didTapTableView:)];
-    
     CGRect tableFrame = CGRectMake(0.0f, 0.0f, size.width, size.height - inputViewHeight);
 	UITableView *tableView = [[UITableView alloc] initWithFrame:tableFrame style:UITableViewStylePlain];
 	tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 	tableView.dataSource = self;
 	tableView.delegate = self;
-    [tableView addGestureRecognizer:tapGestureRecognizer];
 	[self.view addSubview:tableView];
 	_tableView = tableView;
     
@@ -82,10 +79,21 @@
                                    size.width,
                                    inputViewHeight);
     
+    
+    UIPanGestureRecognizer *panGestureRecognizer = _tableView.panGestureRecognizer;
+    
+    if([self.delegate respondsToSelector:@selector(keyboardDismissalMode)] &&
+       [self.delegate keyboardDismissalMode] == JSMessageKeyboardDismissalModeTap)
+    {
+        panGestureRecognizer = nil;
+        UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(didTapTableView:)];
+        [tableView addGestureRecognizer:tapGestureRecognizer];
+    }
+    
     JSMessageInputView *inputView = [[JSMessageInputView alloc] initWithFrame:inputFrame
                                                                         style:inputViewStyle
                                                                      delegate:self
-                                                         panGestureRecognizer:_tableView.panGestureRecognizer];
+                                                         panGestureRecognizer:panGestureRecognizer];
     
     if([self.delegate respondsToSelector:@selector(sendButtonForInputView)]) {
         UIButton *sendButton = [self.delegate sendButtonForInputView];
@@ -214,6 +222,7 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
+    [UIView setAnimationsEnabled:NO];
     JSBubbleMessageType type = [self.delegate messageTypeForRowAtIndexPath:indexPath];
     
     UIImageView *bubbleImageView = [self.delegate bubbleImageViewWithType:type
@@ -269,6 +278,7 @@
         [self.delegate configureCell:cell atIndexPath:indexPath];
     }
     
+    [UIView setAnimationsEnabled:YES];
     return cell;
 }
 
@@ -450,7 +460,7 @@
 
 - (void)didTapTableView:(UITapGestureRecognizer *)gestureRecognizer
 {
-    [[_messageInputView textView] resignFirstResponder];
+    [self.view endEditing:YES];
 }
 
 #pragma mark - Layout message input view
@@ -559,8 +569,6 @@
 - (void)keyboardWillShowHide:(NSNotification *)notification
 {
     CGRect keyboardRect = [[notification.userInfo objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
-	UIViewAnimationCurve curve = [[notification.userInfo objectForKey:UIKeyboardAnimationCurveUserInfoKey] integerValue];
-	double duration = [[notification.userInfo objectForKey:UIKeyboardAnimationDurationUserInfoKey] doubleValue];
     
     [UIView beginAnimations:nil context:NULL];
     [UIView setAnimationDuration:[notification.userInfo[UIKeyboardAnimationDurationUserInfoKey] doubleValue]];
@@ -583,7 +591,8 @@
                                               inputViewFrame.size.width,
                                               inputViewFrame.size.height);
 
-    [self setTableViewInsetsWithBottomValue];
+     [self setTableViewInsetsWithBottomValue:
+      self.view.frame.size.height - self.messageInputView.frame.origin.y - inputViewFrame.size.height];
     
     [UIView commitAnimations];
     
