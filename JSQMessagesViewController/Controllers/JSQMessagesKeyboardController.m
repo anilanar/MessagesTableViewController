@@ -24,6 +24,7 @@
 #import "JSQMessagesKeyboardController.h"
 
 #import "UIDevice+JSQMessages.h"
+#import "NSNotification+JSQKeyboard.h"
 
 
 NSString * const JSQMessagesKeyboardControllerNotificationKeyboardDidChangeFrame = @"JSQMessagesKeyboardControllerNotificationKeyboardDidChangeFrame";
@@ -40,24 +41,9 @@ typedef void (^JSQAnimationCompletionBlock)(BOOL finished);
 @property (assign, nonatomic) BOOL jsq_isObserving;
 
 @property (weak, nonatomic) UIView *keyboardView;
-
-- (void)jsq_registerForNotifications;
-- (void)jsq_unregisterForNotifications;
-
-- (void)jsq_didReceiveKeyboardDidShowNotification:(NSNotification *)notification;
-- (void)jsq_didReceiveKeyboardWillChangeFrameNotification:(NSNotification *)notification;
-- (void)jsq_didReceiveKeyboardDidChangeFrameNotification:(NSNotification *)notification;
-- (void)jsq_didReceiveKeyboardDidHideNotification:(NSNotification *)notification;
-- (void)jsq_handleKeyboardNotification:(NSNotification *)notification completion:(JSQAnimationCompletionBlock)completion;
-
-- (void)jsq_setKeyboardViewHidden:(BOOL)hidden;
-- (void)jsq_notifyKeyboardFrameNotificationForFrame:(CGRect)frame;
-- (void)jsq_resetKeyboardAndTextView;
-
-- (void)jsq_removeKeyboardFrameObserver;
-
-- (void)jsq_handlePanGestureRecognizer:(UIPanGestureRecognizer *)pan;
-
+@property (assign, nonatomic) BOOL keyboardIsVisible;
+@property (assign, nonatomic) CGRect currentKeyboardFrame;
+@property (assign, nonatomic) CGFloat inputHeight;
 @end
 
 
@@ -66,334 +52,374 @@ typedef void (^JSQAnimationCompletionBlock)(BOOL finished);
 
 #pragma mark - Initialization
 
-- (instancetype)initWithTextView:(UITextView *)textView
-                     contextView:(UIView *)contextView
-            panGestureRecognizer:(UIPanGestureRecognizer *)panGestureRecognizer
-                        delegate:(id<JSQMessagesKeyboardControllerDelegate>)delegate
-
-{
-    NSParameterAssert(textView != nil);
-    NSParameterAssert(contextView != nil);
-    NSParameterAssert(panGestureRecognizer != nil);
-
+-(instancetype)initWithTextView:(UITextView *)textView
+                     scrollView:(UIScrollView *)scrollView
+                  referenceView:(UIView *)referenceView
+                       delegate:(id<JSQMessagesKeyboardControllerDelegate>)delegate {
     self = [super init];
     if (self) {
         _textView = textView;
-        _contextView = contextView;
-        _panGestureRecognizer = panGestureRecognizer;
+        _scrollView = scrollView;
+        _referenceView = referenceView;
         _delegate = delegate;
         _jsq_isObserving = NO;
     }
+    
     return self;
 }
 
 - (void)dealloc
 {
-    [self jsq_removeKeyboardFrameObserver];
-    [self jsq_unregisterForNotifications];
     _textView = nil;
-    _contextView = nil;
-    _panGestureRecognizer = nil;
+    _referenceView = nil;
     _delegate = nil;
-    _keyboardView = nil;
-}
-
-#pragma mark - Setters
-
-- (void)setKeyboardView:(UIView *)keyboardView
-{
-    if (_keyboardView) {
-        [self jsq_removeKeyboardFrameObserver];
-    }
-
-    _keyboardView = keyboardView;
-
-    if (keyboardView && !_jsq_isObserving) {
-        [_keyboardView addObserver:self
-                        forKeyPath:NSStringFromSelector(@selector(frame))
-                           options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew)
-                           context:kJSQMessagesKeyboardControllerKeyValueObservingContext];
-
-        _jsq_isObserving = YES;
-    }
 }
 
 #pragma mark - Getters
 
-- (BOOL)keyboardIsVisible
-{
-    return self.keyboardView != nil;
-}
-
 - (CGRect)currentKeyboardFrame
 {
-    if (!self.keyboardIsVisible) {
+    if (!_keyboardIsVisible) {
         return CGRectNull;
     }
 
-    return self.keyboardView.frame;
+    return _currentKeyboardFrame;
 }
 
 #pragma mark - Keyboard controller
 
 - (void)beginListeningForKeyboard
 {
-    if (self.textView.inputAccessoryView == nil) {
-        self.textView.inputAccessoryView = [[UIView alloc] init];
-    }
-
-    [self jsq_registerForNotifications];
-}
-
-- (void)endListeningForKeyboard
-{
-    [self jsq_unregisterForNotifications];
-
-    [self jsq_setKeyboardViewHidden:NO];
-    self.keyboardView = nil;
-}
-
-#pragma mark - Notifications
-
-- (void)jsq_registerForNotifications
-{
-    [self jsq_unregisterForNotifications];
-
     [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(jsq_didReceiveKeyboardDidShowNotification:)
+                                             selector:@selector(handleNotification:)
+                                                 name:UIKeyboardWillShowNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleNotification:)
                                                  name:UIKeyboardDidShowNotification
                                                object:nil];
-
     [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(jsq_didReceiveKeyboardWillChangeFrameNotification:)
-                                                 name:UIKeyboardWillChangeFrameNotification
+                                             selector:@selector(handleNotification:)
+                                                 name:UIKeyboardWillHideNotification
                                                object:nil];
-
     [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(jsq_didReceiveKeyboardDidChangeFrameNotification:)
-                                                 name:UIKeyboardDidChangeFrameNotification
-                                               object:nil];
-
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(jsq_didReceiveKeyboardDidHideNotification:)
+                                             selector:@selector(handleNotification:)
                                                  name:UIKeyboardDidHideNotification
                                                object:nil];
 }
 
-- (void)jsq_unregisterForNotifications
+- (void)endListeningForKeyboard
 {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIKeyboardWillShowNotification
+                                                  object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIKeyboardDidShowNotification
+                                                  object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIKeyboardWillHideNotification
+                                                  object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIKeyboardDidHideNotification
+                                                  object:nil];
 }
 
-- (void)jsq_didReceiveKeyboardDidShowNotification:(NSNotification *)notification
-{
-    self.keyboardView = self.textView.inputAccessoryView.superview;
-    [self jsq_setKeyboardViewHidden:NO];
-
-    [self jsq_handleKeyboardNotification:notification completion:^(BOOL finished) {
-        [self.panGestureRecognizer addTarget:self action:@selector(jsq_handlePanGestureRecognizer:)];
-    }];
-}
-
-- (void)jsq_didReceiveKeyboardWillChangeFrameNotification:(NSNotification *)notification
-{
-    [self jsq_handleKeyboardNotification:notification completion:nil];
-}
-
-- (void)jsq_didReceiveKeyboardDidChangeFrameNotification:(NSNotification *)notification
-{
-    [self jsq_setKeyboardViewHidden:NO];
-
-    [self jsq_handleKeyboardNotification:notification completion:nil];
-}
-
-- (void)jsq_didReceiveKeyboardDidHideNotification:(NSNotification *)notification
-{
-    self.keyboardView = nil;
-
-    [self jsq_handleKeyboardNotification:notification completion:^(BOOL finished) {
-        [self.panGestureRecognizer removeTarget:self action:NULL];
-    }];
-}
-
-- (void)jsq_handleKeyboardNotification:(NSNotification *)notification completion:(JSQAnimationCompletionBlock)completion
-{
-    NSDictionary *userInfo = [notification userInfo];
-
-    CGRect keyboardEndFrame = [userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue];
-
-    if (CGRectIsNull(keyboardEndFrame)) {
-        return;
+-(void)handleNotification:(NSNotification *)notification {
+    CGFloat osVersion = [[[UIDevice currentDevice] systemVersion] floatValue];
+    if(osVersion < 8.00000) {
+        [self handleIos7:notification];
     }
-
-    UIViewAnimationCurve animationCurve = [userInfo[UIKeyboardAnimationCurveUserInfoKey] integerValue];
-    NSInteger animationCurveOption = (animationCurve << 16);
-
-    double animationDuration = [userInfo[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
-
-    CGRect keyboardEndFrameConverted = [self.contextView convertRect:keyboardEndFrame fromView:nil];
-
-    [UIView animateWithDuration:animationDuration
-                          delay:0.0
-                        options:animationCurveOption
-                     animations:^{
-                         [self jsq_notifyKeyboardFrameNotificationForFrame:keyboardEndFrameConverted];
-                     }
-                     completion:^(BOOL finished) {
-                         if (completion) {
-                             completion(finished);
-                         }
-                     }];
+    else {
+        [self handleIos8:notification];
+    }
 }
 
-#pragma mark - Utilities
-
-- (void)jsq_setKeyboardViewHidden:(BOOL)hidden
-{
-    self.keyboardView.hidden = hidden;
-    self.keyboardView.userInteractionEnabled = !hidden;
-}
-
-- (void)jsq_notifyKeyboardFrameNotificationForFrame:(CGRect)frame
-{
-    [self.delegate keyboardController:self keyboardDidChangeFrame:frame];
-
-    [[NSNotificationCenter defaultCenter] postNotificationName:JSQMessagesKeyboardControllerNotificationKeyboardDidChangeFrame
-                                                        object:self
-                                                      userInfo:@{ JSQMessagesKeyboardControllerUserInfoKeyKeyboardDidChangeFrame : [NSValue valueWithCGRect:frame] }];
-}
-
-- (void)jsq_resetKeyboardAndTextView
-{
-    [self jsq_setKeyboardViewHidden:YES];
-    [self jsq_removeKeyboardFrameObserver];
-    [self.textView resignFirstResponder];
-}
-
-#pragma mark - Key-value observing
-
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
-{
-    if (context == kJSQMessagesKeyboardControllerKeyValueObservingContext) {
-
-        if (object == self.keyboardView && [keyPath isEqualToString:NSStringFromSelector(@selector(frame))]) {
-
-            CGRect oldKeyboardFrame = [[change objectForKey:NSKeyValueChangeOldKey] CGRectValue];
-            CGRect newKeyboardFrame = [[change objectForKey:NSKeyValueChangeNewKey] CGRectValue];
-
-            if (CGRectEqualToRect(newKeyboardFrame, oldKeyboardFrame) || CGRectIsNull(newKeyboardFrame)) {
-                return;
+-(void)handleIos7:(NSNotification *)notification {
+    CGRect oldRect = [notification oldRectForView:self.referenceView];
+    CGRect newRect = [notification newRectForView:self.referenceView];
+    CGFloat heightDiff = newRect.size.height - oldRect.size.height;
+    CGFloat yDiff = newRect.origin.y - oldRect.origin.y;
+    
+    BOOL inputHeightDidChange =
+    self.inputHeight != [self.delegate contentHeightForInputAccessoryView];
+    
+    CGFloat newHeight = 0.0;
+    BOOL skip = notification.didShow || notification.didHide;
+    
+    
+    // show | cancel | rotation.3
+    if(heightDiff > 0 && yDiff < 0) {
+        // rotation.3
+        if(inputHeightDidChange) {
+            if(notification.willShow) {
+                newHeight = newRect.size.height;
+                self.inputHeight = [self.delegate contentHeightForInputAccessoryView];
             }
-
-            //  do not convert frame to contextView coordinates here
-            //  KVO is triggered during panning (see below)
-            //  panning occurs in contextView coordinates already
-            [self jsq_notifyKeyboardFrameNotificationForFrame:newKeyboardFrame];
         }
+        // show
+        else if(!self.keyboardIsVisible) {
+            if(notification.willShow)
+                newHeight = newRect.size.height;
+            else
+                self.keyboardIsVisible = YES;
+        }
+        // cancel
+        else {
+            skip = YES;
+        }
+    }
+    
+    // hide | rotation.3
+    else if(heightDiff < 0 && yDiff > 0) {
+        // rotation.3
+        if(inputHeightDidChange) {
+            if(notification.willShow) {
+                newHeight = newRect.size.height;
+                self.inputHeight = [self.delegate contentHeightForInputAccessoryView];
+            }
+        }
+        // hide
+        else {
+            if(notification.willShow)
+                newHeight = newRect.size.height;
+            else
+                self.keyboardIsVisible = NO;
+        }
+    }
+    
+    // inc/dec | pop navigation
+    else if(heightDiff == 0 && yDiff == 0) {
+        // hw hidden
+        if([self isRectOutOfScreen:newRect] && notification.willShow)
+            newHeight = [self.delegate contentHeightForInputAccessoryView];
+        // pop navigation
+        else if(oldRect.origin.x < 0) {
+            if(notification.willShow)
+                newHeight = newRect.size.height;
+            else
+                self.keyboardIsVisible = NO;
+        }
+        
+        else if(notification.willShow)
+            newHeight = newRect.size.height;
+        
+        if(notification.willShow)
+            self.inputHeight = [self.delegate contentHeightForInputAccessoryView];
+    }
+    
+    // rotation.1 | hw shown to hw hidden | sw shown to hw hidden
+    else if(heightDiff == 0 && yDiff > 0) {
+        // rotation.1
+        if(notification.willHide && newRect.origin.y == self.referenceView.frame.size.height) {
+            skip = YES;
+        }
+        // hw shown to hw hidden | sw shown to hw hidden
+        else if(newRect.origin.y != self.referenceView.frame.size.height) {
+            if(notification.willHide)
+                newHeight = self.currentKeyboardFrame.size.height - (newRect.origin.y - oldRect.origin.y);
+            else
+                self.keyboardIsVisible = NO;
+        }
+    }
+    
+    // rotation.2, hw hidden to hw shown | hw cancel | modal initial
+    else if(heightDiff == 0 && yDiff < 0) {
+        // hw hidden & rotation.2
+        if([self isRectOutOfScreen:newRect]) {
+            if(notification.willShow)
+                newHeight = [self.delegate contentHeightForInputAccessoryView];
+        }
+        // (!hw & rotation.2) | (hw shown & rotation.2)
+        else if(oldRect.origin.y == self.referenceView.frame.size.height) {
+            if(notification.willShow)
+                newHeight = newRect.size.height;
+        }
+        // hw cancel
+        else if(self.keyboardIsVisible) {
+            skip = YES;
+        }
+        // modal initial
+        else if(oldRect.origin.y > newRect.origin.y + newRect.size.height) {
+            if(notification.willShow)
+                newHeight = [self.delegate contentHeightForInputAccessoryView];
+        }
+        // hw hidden to hw shown
+        else {
+            if(notification.willShow) {
+                newHeight = newRect.size.height;
+            }
+            else {
+                self.keyboardIsVisible = YES;
+            }
+        }
+    }
+    // sw hidden to hw hidden | didShow | didHide
+    // heightDiff > 0 && yDiff == 0
+    else
+        skip = YES;
+    
+    if(!skip) {
+        CGRect keyboardFrame = newRect;
+        CGFloat oldHeight = _currentKeyboardFrame.size.height;
+        keyboardFrame.size.height = newHeight;
+        _currentKeyboardFrame = keyboardFrame;
+        
+        [notification animate:^{
+            [self animateWithOldHeight:oldHeight newHeight:newHeight];
+        }];
     }
 }
 
-- (void)jsq_removeKeyboardFrameObserver
-{
-    if (!_jsq_isObserving) {
-        return;
+-(void)handleIos8:(NSNotification *)notification {
+    CGRect oldRect = [notification oldRectForView:self.referenceView];
+    CGRect newRect = [notification newRectForView:self.referenceView];
+    CGFloat heightDiff = newRect.size.height - oldRect.size.height;
+    CGFloat yDiff = newRect.origin.y - oldRect.origin.y;
+    
+    CGFloat oldInputHeight = self.inputHeight;
+    CGFloat newInputHeight = [self.delegate contentHeightForInputAccessoryView];
+    self.inputHeight = newInputHeight;
+    BOOL inputHeightDidChange = oldInputHeight != newInputHeight;
+    
+    
+    CGFloat newHeight = 0.0;
+    BOOL skip = notification.didShow || notification.didHide;
+    
+    
+    // cancel | rotation.3 | inc/dec | hw hidden to hw shown.2
+    if(heightDiff > 0 && yDiff < 0) {
+        // rotation.3 | inc/dec
+        //        if(inputHeightDidChange) {
+        if(notification.willShow) {
+            newHeight = newRect.size.height;
+        }
+        //        }
+        // cancel | hw hidden to hw shown.2
+        //        else {
+        //            skip = YES;
+        //        }
     }
-
-    @try {
-        [_keyboardView removeObserver:self
-                           forKeyPath:NSStringFromSelector(@selector(frame))
-                              context:kJSQMessagesKeyboardControllerKeyValueObservingContext];
+    
+    // rotation.3 | inc/dec | hw shown to hw hidden.2
+    else if(heightDiff < 0 && yDiff > 0) {
+        // rotation.3 | inc/dec
+        if(inputHeightDidChange && notification.willShow) {
+            newHeight = newRect.size.height;
+            self.inputHeight = [self.delegate contentHeightForInputAccessoryView];
+        }
+        // hw shown to hw hidden.2
+        else if(notification.willShow) {
+            skip = YES;
+        }
     }
-    @catch (NSException * __unused exception) { }
-
-    _jsq_isObserving = NO;
+    
+    // hide.2 | sw hidden to hw hidden | initial show | navigation pop
+    else if(heightDiff == 0 && yDiff == 0 && notification.willShow) {
+        // hide.2 | initial show
+        if(newRect.size.height == [self.delegate contentHeightForInputAccessoryView])
+            newHeight = [self.delegate contentHeightForInputAccessoryView];
+        // sw hidden to hw hidden
+        else if([self isRectOutOfScreen:newRect])
+            newHeight = [self.delegate contentHeightForInputAccessoryView];
+        // navigation pop
+        else
+            newHeight = newRect.size.height;
+        self.inputHeight = [self.delegate contentHeightForInputAccessoryView];
+    }
+    
+    // hide | rotation.1 | hw shown to hw hidden.1 | sw shown to hw hidden | rotation.4
+    else if(heightDiff == 0 && yDiff > 0) {
+        // rotation.4
+        if(newRect.size.height == [self.delegate contentHeightForInputAccessoryView])
+            skip = YES;
+        // rotation.1
+        if(newRect.origin.y == MAX(self.referenceView.frame.size.height, self.referenceView.frame.size.width)) {
+            skip = YES;
+        }
+        // hide | hw shown to hw hidden.1 | sw shown to hw hidden
+        else if(newRect.origin.y != self.referenceView.frame.size.height) {
+            if(notification.willHide)
+                newHeight = [self.delegate contentHeightForInputAccessoryView];
+            else
+                self.keyboardIsVisible = NO;
+        }
+    }
+    
+    // show | rotation.2, hw hidden to hw shown.1 | hw hidden to sw shown | hw cancel
+    else if(heightDiff == 0 && yDiff < 0) {
+        // hw hidden & rotation.2
+        if([self isRectOutOfScreen:newRect]) {
+            if(notification.willShow)
+                newHeight = [self.delegate contentHeightForInputAccessoryView];
+        }
+        // (!hw & rotation.2) | (hw shown & rotation.2)
+        else if(oldRect.origin.y == self.referenceView.frame.size.height) {
+            if(notification.willShow)
+                newHeight = newRect.size.height;
+        }
+        // hw cancel
+        else if(self.keyboardIsVisible) {
+            skip = YES;
+        }
+        // show | hw hidden to hw shown | hw hidden to sw shown
+        else {
+            if(notification.willShow) {
+                newHeight = newRect.size.height;
+            }
+            else {
+                self.keyboardIsVisible = YES;
+            }
+        }
+    }
+    // didShow | didHide
+    // heightDiff > 0 && yDiff == 0
+    else
+        skip = YES;
+    
+    if(!skip) {
+        CGRect keyboardFrame = newRect;
+        CGFloat oldHeight = _currentKeyboardFrame.size.height;
+        keyboardFrame.size.height = newHeight;
+        _currentKeyboardFrame = keyboardFrame;
+        
+        [notification animate:^{
+            [self animateWithOldHeight:oldHeight newHeight:newHeight];
+        }];
+    }
 }
 
-#pragma mark - Pan gesture recognizer
+-(CGRect)convertRect:(CGRect)rect {
+    if(self.referenceView)
+        return [self.referenceView convertRect:rect fromView:nil];
+    else
+        return rect;
+}
 
-- (void)jsq_handlePanGestureRecognizer:(UIPanGestureRecognizer *)pan
-{
-    CGPoint touch = [pan locationInView:self.contextView];
-
-    //  system keyboard is added to a new UIWindow, need to operate in window coordinates
-    //  also, keyboard always slides from bottom of screen, not the bottom of a view
-    CGFloat contextViewWindowHeight = CGRectGetHeight(self.contextView.window.frame);
-
-    if ([UIDevice jsq_isCurrentDeviceBeforeiOS8]) {
-        //  handle iOS 7 bug when rotating to landscape
-        if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)) {
-            contextViewWindowHeight = CGRectGetWidth(self.contextView.window.frame);
+-(void)animateWithOldHeight:(CGFloat)oldHeight newHeight:(CGFloat)newHeight {
+    CGFloat heightDiff = newHeight - oldHeight;
+    UIEdgeInsets insets = self.scrollView.contentInset;
+    insets.bottom += heightDiff;
+    self.scrollView.contentInset = insets;
+    self.scrollView.scrollIndicatorInsets = insets;
+    
+    if (heightDiff > 0) {
+        CGPoint contentOffset = self.scrollView.contentOffset;
+        CGFloat newAreaHeight = self.scrollView.bounds.size.height - self.scrollView.contentInset.top - self.scrollView.contentInset.bottom;
+        CGFloat oldAreaHeight = newAreaHeight + heightDiff;
+        
+        if (self.scrollView.contentSize.height > oldAreaHeight) {
+            contentOffset.y += heightDiff;
+        } else if (self.scrollView.contentSize.height > newAreaHeight) {
+            contentOffset.y += self.scrollView.contentSize.height - newAreaHeight;
         }
+        self.scrollView.contentOffset = contentOffset;
     }
+}
 
-    CGFloat keyboardViewHeight = CGRectGetHeight(self.keyboardView.frame);
 
-    CGFloat dragThresholdY = (contextViewWindowHeight - keyboardViewHeight - self.keyboardTriggerPoint.y);
 
-    CGRect newKeyboardViewFrame = self.keyboardView.frame;
-
-    BOOL userIsDraggingNearThresholdForDismissing = (touch.y > dragThresholdY);
-
-    self.keyboardView.userInteractionEnabled = !userIsDraggingNearThresholdForDismissing;
-
-    switch (pan.state) {
-        case UIGestureRecognizerStateChanged:
-        {
-            newKeyboardViewFrame.origin.y = touch.y + self.keyboardTriggerPoint.y;
-
-            //  bound frame between bottom of view and height of keyboard
-            newKeyboardViewFrame.origin.y = MIN(newKeyboardViewFrame.origin.y, contextViewWindowHeight);
-            newKeyboardViewFrame.origin.y = MAX(newKeyboardViewFrame.origin.y, contextViewWindowHeight - keyboardViewHeight);
-
-            if (CGRectGetMinY(newKeyboardViewFrame) == CGRectGetMinY(self.keyboardView.frame)) {
-                return;
-            }
-
-            [UIView animateWithDuration:0.0
-                                  delay:0.0
-                                options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionTransitionNone
-                             animations:^{
-                                 self.keyboardView.frame = newKeyboardViewFrame;
-                             }
-                             completion:nil];
-        }
-            break;
-
-        case UIGestureRecognizerStateEnded:
-        case UIGestureRecognizerStateCancelled:
-        case UIGestureRecognizerStateFailed:
-        {
-            BOOL keyboardViewIsHidden = (CGRectGetMinY(self.keyboardView.frame) >= contextViewWindowHeight);
-            if (keyboardViewIsHidden) {
-                [self jsq_resetKeyboardAndTextView];
-                return;
-            }
-
-            CGPoint velocity = [pan velocityInView:self.contextView];
-            BOOL userIsScrollingDown = (velocity.y > 0.0f);
-            BOOL shouldHide = (userIsScrollingDown && userIsDraggingNearThresholdForDismissing);
-
-            newKeyboardViewFrame.origin.y = shouldHide ? contextViewWindowHeight : (contextViewWindowHeight - keyboardViewHeight);
-
-            [UIView animateWithDuration:0.25
-                                  delay:0.0
-                                options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationCurveEaseOut
-                             animations:^{
-                                 self.keyboardView.frame = newKeyboardViewFrame;
-                             }
-                             completion:^(BOOL finished) {
-                                 self.keyboardView.userInteractionEnabled = !shouldHide;
-
-                                 if (shouldHide) {
-                                     [self jsq_resetKeyboardAndTextView];
-                                 }
-                             }];
-        }
-            break;
-
-        default:
-            break;
-    }
+-(BOOL)isRectOutOfScreen: (CGRect)rect {
+    return rect.origin.y + rect.size.height > self.referenceView.frame.size.height;
 }
 
 @end

@@ -22,6 +22,7 @@
 #import "JSQMessagesCollectionViewDelegateFlowLayout.h"
 #import "JSQMessagesCollectionViewDataSource.h"
 #import "JSQMessagesCollectionViewCell.h"
+#import "JSQMessagesInputToolbar.h"
 
 @class JSQMessagesTypingIndicatorFooterView;
 @class JSQMessagesLoadEarlierHeaderView;
@@ -32,6 +33,8 @@
  *  them using a specialized layout for messages.
  */
 @interface JSQMessagesCollectionView : UICollectionView <JSQMessagesCollectionViewCellDelegate>
+
+@property(strong, nonatomic) JSQMessagesInputToolbar *inputAccessoryView;
 
 /**
  *  The object that provides the data for the collection view.

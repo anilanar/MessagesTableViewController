@@ -305,13 +305,14 @@
 
 - (void)didPressAccessoryButton:(UIButton *)sender
 {
+//    [self.collectionView.inputAccessoryView.contentView.textView resignFirstResponder];
     UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:@"Media messages"
                                                        delegate:self
                                               cancelButtonTitle:@"Cancel"
                                          destructiveButtonTitle:nil
                                               otherButtonTitles:@"Send photo", @"Send location", @"Send video", nil];
     
-    [sheet showFromToolbar:self.inputToolbar];
+    [sheet showInView:self.collectionView];
 }
 
 - (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex

@@ -24,6 +24,7 @@
 
 #import "JSQMessagesTypingIndicatorFooterView.h"
 #import "JSQMessagesLoadEarlierHeaderView.h"
+#import "JSQMessagesInputToolbar.h"
 
 #import "UIColor+JSQMessages.h"
 
@@ -163,6 +164,18 @@
     [self.delegate collectionView:self
             didTapCellAtIndexPath:indexPath
                     touchLocation:position];
+}
+
+-(JSQMessagesInputToolbar *)inputAccessoryView {
+    if(!_inputAccessoryView) {
+        CGRect frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, 44);
+        _inputAccessoryView = [[JSQMessagesInputToolbar alloc] initWithFrame:frame];
+    }
+    return _inputAccessoryView;
+}
+
+-(BOOL)canBecomeFirstResponder {
+    return YES;
 }
 
 @end

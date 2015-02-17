@@ -60,6 +60,8 @@
  */
 @interface JSQMessagesInputToolbar : UIToolbar
 
+@property (weak, nonatomic) NSLayoutConstraint *heightConstraint;
+
 /**
  *  The object that acts as the delegate of the toolbar.
  */

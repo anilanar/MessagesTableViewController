@@ -25,6 +25,7 @@
 #import "UIColor+JSQMessages.h"
 #import "UIImage+JSQMessages.h"
 #import "UIView+JSQMessages.h"
+#import "UIDevice+JSQMessages.h"
 
 static void * kJSQMessagesInputToolbarKeyValueObservingContext = &kJSQMessagesInputToolbarKeyValueObservingContext;
 
@@ -47,10 +48,14 @@ static void * kJSQMessagesInputToolbarKeyValueObservingContext = &kJSQMessagesIn
 
 #pragma mark - Initialization
 
-- (void)awakeFromNib
+-(instancetype)initWithFrame:(CGRect)frame
 {
+    if(!(self = [super initWithFrame:frame]))
+       return nil;
+       
     [super awakeFromNib];
-    [self setTranslatesAutoresizingMaskIntoConstraints:NO];
+//    [self setTranslatesAutoresizingMaskIntoConstraints:NO];
+    self.autoresizingMask = UIViewAutoresizingFlexibleHeight;
 
     self.jsq_isObserving = NO;
     self.sendButtonOnRight = YES;
@@ -58,6 +63,9 @@ static void * kJSQMessagesInputToolbarKeyValueObservingContext = &kJSQMessagesIn
     self.preferredDefaultHeight = 44.0f;
 
     JSQMessagesToolbarContentView *toolbarContentView = [self loadToolbarContentView];
+    self.heightConstraint = [NSLayoutConstraint constraintWithItem:toolbarContentView attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeNotAnAttribute multiplier:1.0 constant:self.preferredDefaultHeight];
+    if(![UIDevice jsq_isCurrentDeviceBeforeiOS8])
+        [toolbarContentView addConstraint:self.heightConstraint];
     toolbarContentView.frame = self.frame;
     [self addSubview:toolbarContentView];
     [self jsq_pinAllEdgesOfSubview:toolbarContentView];
@@ -70,6 +78,8 @@ static void * kJSQMessagesInputToolbarKeyValueObservingContext = &kJSQMessagesIn
     self.contentView.rightBarButtonItem = [JSQMessagesToolbarButtonFactory defaultSendButtonItem];
 
     [self toggleSendButtonEnabled];
+       
+    return self;
 }
 
 - (JSQMessagesToolbarContentView *)loadToolbarContentView
@@ -190,6 +200,10 @@ static void * kJSQMessagesInputToolbarKeyValueObservingContext = &kJSQMessagesIn
     @catch (NSException *__unused exception) { }
     
     _jsq_isObserving = NO;
+}
+
+-(CGSize)intrinsicContentSize {
+    return self.frame.size;
 }
 
 @end
