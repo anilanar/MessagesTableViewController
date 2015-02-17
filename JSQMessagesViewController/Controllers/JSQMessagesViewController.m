@@ -237,7 +237,10 @@ static void * kJSQMessagesKeyValueObservingContext = &kJSQMessagesKeyValueObserv
 }
 
 -(CGFloat)contentHeightForInputAccessoryView {
-    return self.toolbarHeightConstraint.constant;
+    if([UIDevice jsq_isCurrentDeviceBeforeiOS8])
+        return self.inputToolbar.frame.size.height;
+    else
+        return self.toolbarHeightConstraint.constant;
 }
 
 

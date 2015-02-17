@@ -222,7 +222,7 @@ typedef void (^JSQAnimationCompletionBlock)(BOOL finished);
         }
     }
     
-    // rotation.2, hw hidden to hw shown | hw cancel | modal initial
+    // rotation.2, hw hidden to hw shown | modal initial
     else if(heightDiff == 0 && yDiff < 0) {
         // hw hidden & rotation.2
         if([self isRectOutOfScreen:newRect]) {
@@ -253,8 +253,10 @@ typedef void (^JSQAnimationCompletionBlock)(BOOL finished);
             }
         }
     }
-    // sw hidden to hw hidden | didShow | didHide
+    // sw hidden to hw hidden | hw cancel | didShow | didHide |
     // heightDiff > 0 && yDiff == 0
+    else if(heightDiff > 0 && yDiff == 0 && notification.willShow)
+        newHeight = newRect.size.height;
     else
         skip = YES;
     
@@ -289,22 +291,25 @@ typedef void (^JSQAnimationCompletionBlock)(BOOL finished);
     // cancel | rotation.3 | inc/dec | hw hidden to hw shown.2
     if(heightDiff > 0 && yDiff < 0) {
         // rotation.3 | inc/dec
-        //        if(inputHeightDidChange) {
-        if(notification.willShow) {
-            newHeight = newRect.size.height;
+        if(inputHeightDidChange && notification.willShow) {
+            newHeight = _currentKeyboardFrame.size.height + oldRect.origin.y - newRect.origin.y;
+            self.inputHeight = [self.delegate contentHeightForInputAccessoryView];
         }
-        //        }
-        // cancel | hw hidden to hw shown.2
-        //        else {
-        //            skip = YES;
-        //        }
+
+        // cancel
+        else if(oldRect.size.height == [self.delegate contentHeightForInputAccessoryView])
+            skip = YES;
+        
+        // hw hidden to hw shown.2
+        else if(notification.willShow)
+                newHeight = newRect.size.height;
     }
     
     // rotation.3 | inc/dec | hw shown to hw hidden.2
     else if(heightDiff < 0 && yDiff > 0) {
         // rotation.3 | inc/dec
         if(inputHeightDidChange && notification.willShow) {
-            newHeight = newRect.size.height;
+            newHeight = _currentKeyboardFrame.size.height + oldRect.origin.y - newRect.origin.y;
             self.inputHeight = [self.delegate contentHeightForInputAccessoryView];
         }
         // hw shown to hw hidden.2
@@ -345,7 +350,7 @@ typedef void (^JSQAnimationCompletionBlock)(BOOL finished);
         }
     }
     
-    // show | rotation.2, hw hidden to hw shown.1 | hw hidden to sw shown | hw cancel
+    // show | rotation.2, hw hidden to hw shown.1 | hw hidden to sw shown | hw cancel | modal initial
     else if(heightDiff == 0 && yDiff < 0) {
         // hw hidden & rotation.2
         if([self isRectOutOfScreen:newRect]) {
@@ -361,6 +366,12 @@ typedef void (^JSQAnimationCompletionBlock)(BOOL finished);
         else if(self.keyboardIsVisible) {
             skip = YES;
         }
+        // modal initial
+        else if(oldRect.origin.y > newRect.origin.y + newRect.size.height) {
+            if(notification.willShow)
+                newHeight = [self.delegate contentHeightForInputAccessoryView];
+        }
+        
         // show | hw hidden to hw shown | hw hidden to sw shown
         else {
             if(notification.willShow) {
@@ -407,10 +418,11 @@ typedef void (^JSQAnimationCompletionBlock)(BOOL finished);
         CGFloat newAreaHeight = self.scrollView.bounds.size.height - self.scrollView.contentInset.top - self.scrollView.contentInset.bottom;
         CGFloat oldAreaHeight = newAreaHeight + heightDiff;
         
-        if (self.scrollView.contentSize.height > oldAreaHeight) {
+        CGFloat contentSize = self.scrollView.contentSize.height;
+        if (contentSize > newAreaHeight && contentSize < oldAreaHeight) {
+            contentOffset.y += contentSize - newAreaHeight;
+        } else if (contentSize > oldAreaHeight) {
             contentOffset.y += heightDiff;
-        } else if (self.scrollView.contentSize.height > newAreaHeight) {
-            contentOffset.y += self.scrollView.contentSize.height - newAreaHeight;
         }
         self.scrollView.contentOffset = contentOffset;
     }
